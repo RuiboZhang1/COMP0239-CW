@@ -15,13 +15,16 @@ from torchvision.transforms.functional import InterpolationMode
 from transformers import BlipProcessor, BlipForConditionalGeneration
 import json
 from prefect import flow, task
+from prefect.task_runners import RayTaskRunner
 import ray
+
+# Initialize Ray
+ray.init(address='auto')
 
 # Global Variable
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 s3_client = boto3.client('s3')
 bucket_name = 'comp0239-ucabrz5'
-
 
 # This function receives a img url, download the img and store it to S3 bucket
 @task
@@ -75,14 +78,22 @@ def save_caption(caption, s3_path):
     s3_client.put_object(Body=caption_json, Bucket=bucket_name, Key=caption_path)
 
 @flow
-def main(img_url):
+def process_image_url(img_url):
     image, s3_path = get_and_save_image(img_url)
     processor, model = load_model()
     caption = generate_caption(image, processor, model)
     print(caption)
     save_caption(caption, s3_path)
 
+@flow(task_runner=RayTaskRunner())
+def distribute_caption_generation(img_urls_file):
+    # Read the image URLs from the file
+    with open(img_urls_file, 'r') as f:
+        img_urls = f.read().splitlines()
+    
+    # Distribute the image processing tasks across the Ray cluster
+    for img_url in img_urls:
+        process_image_url(img_url)
+
 if __name__ == "__main__":
-    # Example image URL
-    img_url = "http://images.cocodataset.org/unlabeled2017/000000430631.jpg"
-    main(img_url=img_url)
+    distribute_caption_generation("/home/ec2-user/COMP0239-CW/BLIP/coco_image_urls.txt")
