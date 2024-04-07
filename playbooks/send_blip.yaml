@@ -1,0 +1,15 @@
+---
+- name: Conditionally copy BLIP directory to all client machines
+  hosts: clients
+  become: yes
+  tasks:
+    - name: Check if BLIP directory exists
+      ansible.builtin.stat:
+        path: /home/ec2-user/data/BLIP/
+      register: blip_dir
+
+    - name: Copy the BLIP directory to client
+      ansible.builtin.copy:
+        src: /home/ec2-user/BLIP/
+        dest: /home/ec2-user/data/BLIP/
+      when: not blip_dir.stat.exists

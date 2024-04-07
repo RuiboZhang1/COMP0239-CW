@@ -4,88 +4,84 @@ import os
 custom_hf_dir = '/home/ec2-user/data/cache'  # Directory to store Hugging Face cache and models
 os.environ['HF_HOME'] = custom_hf_dir  # Set environment variable for Hugging Face
 
-# # Set up custom paths
-# custom_model_dir = '/home/ec2-user/data/models'  # Directory to store models
-# custom_image_dir = '/home/ec2-user/data/images'  # Directory to store images
-# os.environ['HF_HOME'] = custom_model_dir  # Set environment variable for transformers
-
-import sys
-from PIL import Image
+import os
+import uuid
 import requests
+import boto3
+from PIL import Image
 import torch
 from torchvision import transforms
 from torchvision.transforms.functional import InterpolationMode
 from transformers import BlipProcessor, BlipForConditionalGeneration
-from models.blip import blip_decoder
-import time
-import logging
+import json
+from prefect import flow, task
+import ray
 
-logging.basicConfig(level=logging.INFO)
-
-
+# Global Variable
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+s3_client = boto3.client('s3')
+bucket_name = 'comp0239-ucabrz5'
 
-def save_image(img_url, img_path):
+
+# This function receives a img url, download the img and store it to S3 bucket
+@task
+def get_and_save_image(img_url):
     response = requests.get(img_url, stream=True)
-    response.raise_for_status()  # Ensure the request was successful
+    response.raise_for_status()
+    img_path = f"/tmp/{uuid.uuid4()}.jpg"  # Temporary save path
     with open(img_path, 'wb') as handle:
         for block in response.iter_content(1024):
             handle.write(block)
-    return Image.open(img_path).convert('RGB')
-
-def load_demo_image(image_size, device, image_path):
-    # img_url = 'https://storage.googleapis.com/sfr-vision-language-research/BLIP/demo.jpg' 
-    # raw_image = Image.open(requests.get(img_url, stream=True).raw).convert('RGB')   
-    raw_image = Image.open(image_path).convert('RGB') 
-
-    w,h = raw_image.size
-    # display(raw_image.resize((w//5,h//5)))
     
-    transform = transforms.Compose([
-        transforms.Resize((image_size,image_size),interpolation=InterpolationMode.BICUBIC),
-        transforms.ToTensor(),
-        transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
-        ]) 
-    image = transform(raw_image).unsqueeze(0).to(device)   
-    return image
-
-start = time.time()
-
-# # Make sure the directories exist
-# os.makedirs(custom_model_dir, exist_ok=True)
-# os.makedirs(custom_image_dir, exist_ok=True)
-
-# Make sure the Hugging Face cache directory exists
-os.makedirs(os.path.join(custom_hf_dir, 'images'), exist_ok=True)
-
-
-# Define paths
-demo_image_path = os.path.join(custom_hf_dir, 'images', 'demo.jpg')
-img_url = 'https://storage.googleapis.com/sfr-vision-language-research/BLIP/demo.jpg'
-save_image(img_url, demo_image_path)
-
-processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
-
-raw_image = save_image(img_url, demo_image_path)
-inputs = processor(raw_image, return_tensors="pt")
-out = model.generate(**inputs)
-print(processor.decode(out[0], skip_special_tokens=True))
-
-print(time.time() - start)
-
-# image_size = 384
-# image = load_demo_image(image_size=image_size, device=device)
-
-# model_url = 'https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_base_capfilt_large.pth'
+    # Generate a unique directory name for this image
+    unique_folder = str(uuid.uuid4())
+    s3_path = f"images/{unique_folder}/image.jpg"
     
-# model = blip_decoder(pretrained=model_url, image_size=image_size, vit='base')
-# model.eval()
-# model = model.to(device)
+    s3_client.upload_file(img_path, bucket_name, s3_path)
 
-# with torch.no_grad():
-#     # beam search
-#     caption = model.generate(image, sample=False, num_beams=3, max_length=20, min_length=5) 
-#     # nucleus sampling
-#     # caption = model.generate(image, sample=True, top_p=0.9, max_length=20, min_length=5) 
-#     print('caption: '+caption[0])
+    image = Image.open(img_path).convert('RGB')
+
+    # Cleanup the local file
+    os.remove(img_path)
+
+    return image, s3_path  
+
+# This function is loading the pretrained model
+@task
+def load_model():
+    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+    model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+    return processor, model
+
+@task
+def generate_caption(image, processor, model):    
+    inputs = processor(images=image, return_tensors="pt").to(device)
+    out = model.generate(**inputs)
+    caption = processor.decode(out[0], skip_special_tokens=True)
+    return caption
+
+
+# This function save the generated captions to the S3 bucket.
+@task
+def save_caption(caption, s3_path):
+    # Change the path to store the caption as a .json file
+    caption_path = s3_path.replace('image.jpg', 'caption.json')
+    caption_data = {"caption": caption}
+    
+    # Create a JSON string from the caption
+    caption_json = json.dumps(caption_data)
+    
+    # Save the caption to S3
+    s3_client.put_object(Body=caption_json, Bucket=bucket_name, Key=caption_path)
+
+@flow
+def main(img_url):
+    image, s3_path = get_and_save_image(img_url).result()
+    processor, model = load_model().result()
+    caption = generate_caption(image, processor, model).result()
+    save_caption(caption, s3_path).result()
+
+if __name__ == "__main__":
+    # Example image URL
+    img_url = "https://example.com/path/to/an/image.jpg"
+    main(img_url=img_url)

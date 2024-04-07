@@ -1,0 +1,79 @@
+---
+- name: Set up Python virtual environment and install required packages
+  hosts: clients
+  become: yes 
+  environment:
+    PIP_CACHE_DIR: /home/ec2-user/data/tmp
+  tasks:
+    - name: Remove the pip cache directory
+      file:
+        path: /root/.cache/pip
+        state: absent
+
+    - name: Ensure pip is installed
+      package:
+        name: python3-pip
+        state: present
+
+    - name: Install virtualenv package
+      pip:
+        name: virtualenv
+        state: present
+
+    - name: Ensure custom TMPDIR exists
+      file:
+        path: /home/ec2-user/data/tmp
+        state: directory
+        mode: '0775'
+        owner: ec2-user
+        group: ec2-user
+
+    - name: Create a virtual environment
+      command:
+        cmd: "python3 -m venv /home/ec2-user/data/blip_venv"
+        creates: "/home/ec2-user/data/blip_venv"
+
+    - name: Upgrade pip in the virtual environment
+      pip:
+        name: pip
+        state: latest
+        extra_args: "--cache-dir /home/ec2-user/data/tmp"
+        virtualenv: /home/ec2-user/data/blip_venv
+
+    - name: Install required packages with custom cache directory
+      ansible.builtin.pip:
+        requirements: /home/ec2-user/data/BLIP/requirements.txt
+        virtualenv: /home/ec2-user/data/blip_venv
+        extra_args: "--cache-dir /home/ec2-user/data/tmp"
+      environment:
+        TMPDIR: /home/ec2-user/data/tmp
+      become: yes  
+
+    - name: Install 'transformers' package from a Git repository
+      ansible.builtin.pip:
+        name: git+https://github.com/huggingface/transformers
+        virtualenv: /home/ec2-user/data/blip_venv
+        extra_args: "--cache-dir /home/ec2-user/data/tmp"
+      environment:
+        TMPDIR: /home/ec2-user/data/tmp
+      become: yes  
+
+    - name: Install other Python dependencies with pip
+      ansible.builtin.pip:
+        name: "{{ item }}"
+        state: present
+        virtualenv: /home/ec2-user/data/blip_venv
+        extra_args: "--cache-dir /home/ec2-user/data/tmp"
+      loop:
+        - numpy
+        - cython
+        - scipy
+        - prometheus-client
+        - prefect
+        - prefect-ray
+        - ray
+        - boto3
+        - botocore
+      environment:
+        TMPDIR: /home/ec2-user/data/tmp
+        become: yes  

@@ -1,0 +1,31 @@
+---
+- name: Configure firewalld on client machines
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install firewalld
+      ansible.builtin.dnf:
+        name: firewalld
+        state: present
+
+    - name: Enable firewalld service
+      ansible.builtin.systemd:
+        name: firewalld
+        enabled: yes
+
+    - name: Start firewalld service
+      ansible.builtin.systemd:
+        name: firewalld
+        state: started
+
+    - name: Open HTTP service in the firewall
+      ansible.posix.firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+        immediate: yes
+        zone: public
+
+    - name: Reload firewalld
+      ansible.builtin.command:
+        cmd: firewall-cmd --reload

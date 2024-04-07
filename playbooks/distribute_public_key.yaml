@@ -1,0 +1,18 @@
+---
+- name: Generate SSH Key on Host
+  hosts: host
+  tasks:
+    - name: Generate SSH key
+      openssh_keypair:
+        path: /home/ec2-user/.ssh/ansible_key
+        force: no  # Do not overwrite if key already exists
+      register: ssh_key
+
+- name: Distribute SSH Key to all machines
+  hosts: clients
+  tasks:
+    - name: Add the public key to remote machine
+      authorized_key:
+        user: ec2-user
+        state: present
+        key: "{{ hostvars['3.8.40.209']['ssh_key']['public_key'] }}"

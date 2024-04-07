@@ -1,0 +1,27 @@
+---
+- name: Install Python Dependencies
+  hosts: clients
+  become: yes
+  tasks:
+    - name: Install Python Dependencies with pip
+      pip:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - biopython
+        - numpy
+        - awscli
+        - boto3
+        - botocore
+        - scipy
+        - prometheus-client
+        
+    - name: Install PyTorch (CPU version)
+      pip:
+        name: "{{ item }}"
+        state: present
+        extra_args: "--index-url https://download.pytorch.org/whl/cpu"
+      loop:
+        - torch
+        - torchvision
+        - torchaudio
