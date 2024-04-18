@@ -1,0 +1,44 @@
+---
+- name: Set up Python virtual environment and install required packages
+  hosts: host
+  become: yes 
+  tasks:
+    - name: Remove the pip cache directory
+      file:
+        path: /root/.cache/pip
+        state: absent
+
+    - name: Ensure pip is installed
+      package:
+        name: python3-pip
+        state: present
+
+    - name: Install virtualenv package
+      pip:
+        name: virtualenv
+        state: present
+
+    - name: Create a virtual environment
+      command:
+        cmd: "python3 -m venv /home/ec2-user/blip_venv"
+        creates: "/home/ec2-user/blip_venv"
+
+    - name: Upgrade pip in the virtual environment
+      pip:
+        name: pip
+        state: latest
+        virtualenv: /home/ec2-user/blip_venv
+
+    - name: Install Python dependencies with pip
+      ansible.builtin.pip:
+        name: "{{ item }}"
+        state: latest
+        virtualenv: /home/ec2-user/blip_venv
+      loop:
+        - numpy
+        - cython
+        - scipy
+        - prometheus-client
+        - boto3
+        - botocore
+        - celery[redis]

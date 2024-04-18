@@ -61,7 +61,7 @@
     - name: Install other Python dependencies with pip
       ansible.builtin.pip:
         name: "{{ item }}"
-        state: present
+        state: latest
         virtualenv: /home/ec2-user/data/blip_venv
         extra_args: "--cache-dir /home/ec2-user/data/tmp"
       loop:
@@ -69,11 +69,9 @@
         - cython
         - scipy
         - prometheus-client
-        - prefect
-        - prefect-ray
-        - ray
         - boto3
         - botocore
+        - celery[redis]
       environment:
         TMPDIR: /home/ec2-user/data/tmp
         become: yes  
