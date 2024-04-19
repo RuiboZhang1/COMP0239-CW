@@ -50,6 +50,7 @@ def fetch_and_process_image(self, image_url):
         s3_key = f"{image_md5}.jpg"
         try:
             # Upload image to S3
+            image_bytes.seek(0)  # Reset file pointer to the beginning before uploading
             s3_client.upload_fileobj(image_bytes, BUCKET_NAME, s3_key)
             return process_image(s3_key)
         except NoCredentialsError:
@@ -70,7 +71,12 @@ def process_image(self, s3_key):
     try:
         # Download image from S3
         image_obj = s3_client.get_object(Bucket=BUCKET_NAME, Key=s3_key)
-        image = Image.open(image_obj['Body']).convert("RGB")
+        try:
+            image = Image.open(BytesIO(image_obj['Body'].read())).convert("RGB")
+        except Exception as e:
+            logger.error(f"Error processing image {s3_key}: {e}")
+            return None
+
         image_md5 = s3_key.split('.')[0]
 
         if r.exists(image_md5):

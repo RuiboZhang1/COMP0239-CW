@@ -2,9 +2,18 @@ import requests
 import os
 import time
 
-# Read the first 100 URLs from the text file
+start_line = 100  # Start reading from this line
+end_line = 200   # Read up to this line
+
+# Read lines from start_line to end_line
+urls = []
 with open("coco_image_urls.txt", "r") as file:
-    urls = [next(file).strip() for _ in range(100)]
+    for current_line_number, line in enumerate(file, 1):
+        if current_line_number >= start_line:
+            urls.append(line.strip())
+        if current_line_number == end_line:
+            break
+
 
 # URL of your Flask endpoint
 endpoint = "http://10.0.15.46:4200/"
@@ -33,11 +42,11 @@ for url in urls:
     upload_data = upload_response.json()
     
     if 'task_id' in upload_data:
-        # print(f"Submitted URL {url}, waiting for result...")
+        print(f"Submitted URL {url}, waiting for result...")
         task_id = upload_data['task_id']
         caption = get_task_result(task_id)
         print(f"Caption for image {url}: {caption}")
     else:
-        print(f"Failed to submit URL {url}, response: {upload_data}")
+        print(f"Image {url} is existed, response: {upload_data}")
 
 print(time.time() - start)
