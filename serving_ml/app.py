@@ -7,6 +7,7 @@ import redis
 from celery.utils.log import get_task_logger
 import boto3
 from celery_task_app.tasks import fetch_and_process_image, process_image
+from celery import Celery
 
 # Initialize boto3 client
 s3_client = boto3.client('s3')
@@ -16,10 +17,10 @@ logger = get_task_logger(__name__)
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = '/home/ec2-user/COMP0239-CW/uploaded_image/'
+celery = Celery(app.name, broker='redis://10.0.15.135/0', backend='redis://10.0.15.135/1')
 
 # Initialize Redis
 r = redis.Redis(host='10.0.15.135', port=6379, db=0)
-
 
 def md5(file_path):
     hash_md5 = hashlib.md5()
@@ -58,6 +59,15 @@ def upload_file():
     # Enqueue image processing task
     task = process_image.delay(file_path)
     return jsonify({"task_id": task.id}), 202
+
+@app.route('/result/<task_id>', methods=['GET'])
+def get_result(task_id):
+    result = celery.AsyncResult(task_id)
+    if result.state == 'PENDING':
+        return jsonify({'state': result.state, 'status': 'Task is still processing'}), 202
+    elif result.state == 'FAILURE':
+        return jsonify({'state': result.state, 'status': str(result.info)}), 500
+    return jsonify({'state': result.state, 'result': result.result}), 200
 
 # @app.post('/churn/predict', response_model=Task, status_code=202)
 # async def churn(customer: Customer):
