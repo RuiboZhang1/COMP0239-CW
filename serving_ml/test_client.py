@@ -33,7 +33,7 @@ for url in urls:
     upload_data = upload_response.json()
     
     if 'task_id' in upload_data:
-        print(f"Submitted URL {url}, waiting for result...")
+        # print(f"Submitted URL {url}, waiting for result...")
         task_id = upload_data['task_id']
         caption = get_task_result(task_id)
         print(f"Caption for image {url}: {caption}")

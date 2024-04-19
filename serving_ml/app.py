@@ -1,14 +1,13 @@
 from celery.result import AsyncResult
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
-import hashlib
 import os
 import redis
 from celery.utils.log import get_task_logger
 import boto3
 from celery_task_app.tasks import fetch_and_process_image, process_image
+from celery_task_app.utilities import md5, file_md5_from_url
 from celery import Celery
-import requests
 
 # Initialize boto3 client
 s3_client = boto3.client('s3')
@@ -22,25 +21,6 @@ celery = Celery(app.name, broker='redis://10.0.15.135/0', backend='redis://10.0.
 
 # Initialize Redis
 r = redis.Redis(host='10.0.15.135', port=6379, db=0)
-
-def md5(file_path):
-    hash_md5 = hashlib.md5()
-    with open(file_path, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            hash_md5.update(chunk)
-    return hash_md5.hexdigest()
-
-def file_md5_from_url(image_url):
-    response = requests.get(image_url)
-    if response.status_code == 200:
-        return file_md5(BytesIO(response.content))
-    return None
-
-def file_md5(file_stream):
-    hash_md5 = hashlib.md5()
-    for chunk in iter(lambda: file_stream.read(4096), b""):
-        hash_md5.update(chunk)
-    return hash_md5.hexdigest()
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
