@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc  # Ignore compiled Python bytecode
+.DS_Store  # Ignore Mac OS directory metadata
+env/  # Ignore virtual environment directory
+.venv  # Ignore another common virtual environment directory

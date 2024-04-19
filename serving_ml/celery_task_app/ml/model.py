@@ -7,13 +7,13 @@ class BlipModel:
         
 
     @staticmethod
-    def _load_model_from_path():
+    def _load_models():
         processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
         model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
 
         return processor, model
 
-    def predict(self, image):
+    def predict_caption(self, image):
         inputs = self.processor(images=image, return_tensors="pt")
         outputs = self.model.generate(**inputs)
         caption = self.processor.decode(outputs[0], skip_special_tokens=True)

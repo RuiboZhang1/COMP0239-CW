@@ -103,7 +103,7 @@ def process_image(self, s3_key):
         if r.exists(image_md5):
                 caption = r.get(image_md5).decode('utf-8')
         else:
-            caption = self.model.pred_caption(image)
+            caption = self.model.predict_caption(image)
             # Save the caption to Redis with MD5 as the key.
             r.set(image_md5, caption)
             s3_client.delete_object(Bucket=BUCKET_NAME, Key=s3_key)

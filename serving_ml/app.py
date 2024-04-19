@@ -29,7 +29,6 @@ def md5(file_path):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
 
-
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Create celery prediction task. Return task_id to client in order to retrieve result"""
