@@ -8,6 +8,7 @@ from celery.utils.log import get_task_logger
 import boto3
 from celery_task_app.tasks import fetch_and_process_image, process_image
 from celery import Celery
+import requests
 
 # Initialize boto3 client
 s3_client = boto3.client('s3')
@@ -29,9 +30,21 @@ def md5(file_path):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
 
+def file_md5_from_url(image_url):
+    response = requests.get(image_url)
+    if response.status_code == 200:
+        return file_md5(BytesIO(response.content))
+    return None
+
+def file_md5(file_stream):
+    hash_md5 = hashlib.md5()
+    for chunk in iter(lambda: file_stream.read(4096), b""):
+        hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    """Create celery prediction task. Return task_id to client in order to retrieve result"""
+    """Create celery prediction task. Return task_id or result directly to the client."""
 
     if 'file' not in request.files and 'image_url' not in request.json:
         return jsonify(error="No file or image_url provided."), 400
@@ -45,19 +58,23 @@ def upload_file():
         file.save(file_path)
         image_md5 = md5(file_path)
 
-        if r.exists(image_md5):
-            # Image already processed, fetch caption
-            caption = r.get(image_md5).decode('utf-8')
-            return jsonify(caption=caption)
-
     elif 'image_url' in request.json:
         image_url = request.json['image_url']
-        task = fetch_and_process_image.delay(image_url)
-        return jsonify({"task_id": task.id}), 202
+        image_md5 = file_md5_from_url(image_url)  # Assume this function exists
+
+    # Check if the image has already been processed
+    if r.exists(image_md5):
+        # Image already processed, fetch caption
+        caption = r.get(image_md5).decode('utf-8')
+        return jsonify(caption=caption)
 
     # Enqueue image processing task
-    task = process_image.delay(file_path)
+    if 'file' in request.files:
+        task = process_image.delay(file_path)
+    else:
+        task = fetch_and_process_image.delay(image_url)
     return jsonify({"task_id": task.id}), 202
+
 
 @app.route('/result/<task_id>', methods=['GET'])
 def get_result(task_id):
