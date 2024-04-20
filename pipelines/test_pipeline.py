@@ -20,6 +20,12 @@ with open("coco_image_urls.txt", "r") as file:
 # URL of your Flask endpoint
 endpoint = "http://10.0.15.46:4200/"
 
+# CSV file creation
+csvfile = open('captions.csv', 'w', newline='')
+csvwriter = csv.writer(csvfile)
+csvwriter.writerow(['Image_Name', 'Task_ID', 'Caption'])
+
+
 def get_task_result(task_id):
     """Polls the server for the result of the task with the given task_id."""
     result_endpoint = os.path.join(endpoint, "result", task_id)
@@ -62,25 +68,33 @@ for url in urls:
     image_number = extract_image_number(url)
     upload_response = requests.post(os.path.join(endpoint, "upload"), json={"image_url": url})
     upload_data = upload_response.json()
-    
-    if 'task_id' in upload_data:
-        print(f"Submitted URL {url}, task ID: {upload_data['task_id']}")
+
+    # The image is existed in the database, directly write the result to csv
+    if 'caption' in upload_data:
+        csvwriter.writerow([image_number, '', upload_data['caption']])
+        csvfile.flush()
+        print(f"Caption for existing image {url}: {upload_data['caption']}")
+
+    # If image not existed, leave it for processing
+    elif 'task_id' in upload_data:
         task_ids[upload_data['task_id']] = image_number  # Map task ID to image number
+        print(f"Submitted URL {url}, task ID: {upload_data['task_id']}")
+
     
+    # Wait 2 seconds to send a new image
     time.sleep(2)
 
 # Poll all tasks and wait for their results
 captions = poll_task_results(task_ids)
 
-# Write results to CSV
-with open('captions.csv', 'w', newline='') as csvfile:
-    csvwriter = csv.writer(csvfile)
-    csvwriter.writerow(['Image_Name', 'Task_ID', 'Caption'])
+# Write task results to CSV
+for task_id, image_number in task_ids.items():
+    caption = captions.get(task_id, "Can't Identify Image")  # Change here to get captions by task_id
+    csvwriter.writerow([image_number, task_id, caption])
+    csvfile.flush()
 
-    for task_id, image_number in task_ids.items():
-        caption = captions.get(image_number, "Can't Identity Image")
-        csvwriter.writerow([image_number, task_id, caption])
-        csvfile.flush()  # Flush after each row
+# Close the CSV file when done
+csvfile.close()
 
 print("All captions have been retrieved and written to the CSV file.")
 

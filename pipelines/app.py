@@ -46,7 +46,7 @@ def upload_file():
     if r.exists(image_md5):
         # Image already processed, fetch caption
         caption = r.get(image_md5).decode('utf-8')
-        return jsonify(caption=caption)
+        return jsonify({"caption": caption})
 
     # Enqueue image processing task
     if 'file' in request.files:
