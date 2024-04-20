@@ -33,6 +33,8 @@
         - "6379/udp"
         - "8265/tcp"  # Ray Dashboard
         - "8265/udp"
+        - "3000/tcp"
+        - "3000/udp" # Grafana
 
     - name: Reload firewalld to apply changes
       ansible.builtin.service:

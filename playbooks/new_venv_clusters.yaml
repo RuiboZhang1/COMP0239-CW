@@ -72,6 +72,7 @@
         - boto3
         - botocore
         - celery[redis]
+        - flower
       environment:
         TMPDIR: /home/ec2-user/data/tmp
         become: yes  

@@ -42,3 +42,4 @@
         - boto3
         - botocore
         - celery[redis]
+        - flower
