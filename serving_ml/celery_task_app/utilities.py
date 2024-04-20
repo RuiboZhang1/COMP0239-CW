@@ -20,3 +20,7 @@ def file_md5(file_stream):
     for chunk in iter(lambda: file_stream.read(4096), b""):
         hash_md5.update(chunk)
     return hash_md5.hexdigest()
+
+# Function to extract image number from URL
+def extract_image_number(url):
+    return url.split('/')[-1].split('.')[0]

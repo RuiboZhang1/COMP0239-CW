@@ -1,9 +1,11 @@
 import requests
 import os
+import csv
 import time
+from celery_task_app.utilities import extract_image_number
 
-start_line = 100  # Start reading from this line
-end_line = 200   # Read up to this line
+start_line = 1  # Start reading from this line
+end_line = 30   # Read up to this line
 
 # Read lines from start_line to end_line
 urls = []
@@ -33,20 +35,84 @@ def get_task_result(task_id):
             return None
         else:
             return result_data['result']
+        
+def poll_task_results(task_ids):
+    """Polls the server for the results of the tasks."""
+    results = {}
+    while task_ids:
+        for task_id in list(task_ids.keys()):  # Use list to avoid dictionary size change during iteration
+            result_endpoint = os.path.join(endpoint, "result", task_id)
+            result_response = requests.get(result_endpoint)
+            result_data = result_response.json()
 
-start = time.time()
+            if result_data['state'] == 'SUCCESS':
+                results[task_ids[task_id]] = result_data['result']
+                task_ids.pop(task_id)  # Remove completed task
+            elif result_data['state'] == 'FAILURE':
+                print(f"Task {task_id} failed with error: {result_data.get('status')}")
+                results[task_ids[task_id]] = None
+                task_ids.pop(task_id)  # Remove failed task
+            # No need for an else block, let it loop until all tasks are done or failed
+        time.sleep(2)  # Sleep before polling again
+    return results
 
 # Send each URL to the Flask endpoint
+task_ids = {}
 for url in urls:
+    image_number = extract_image_number(url)
     upload_response = requests.post(os.path.join(endpoint, "upload"), json={"image_url": url})
     upload_data = upload_response.json()
     
     if 'task_id' in upload_data:
-        print(f"Submitted URL {url}, waiting for result...")
-        task_id = upload_data['task_id']
-        caption = get_task_result(task_id)
-        print(f"Caption for image {url}: {caption}")
-    else:
-        print(f"Image {url} is existed, response: {upload_data}")
+        print(f"Submitted URL {url}, task ID: {upload_data['task_id']}")
+        task_ids[upload_data['task_id']] = image_number  # Map task ID to image number
+    
+    time.sleep(2)
 
-print(time.time() - start)
+# Poll all tasks and wait for their results
+captions = poll_task_results(task_ids)
+
+# Write results to CSV
+with open('captions.csv', 'w', newline='') as csvfile:
+    csvwriter = csv.writer(csvfile)
+    csvwriter.writerow(['Image_Name', 'Task_ID', 'Caption'])
+
+    for task_id, image_number in task_ids.items():
+        caption = captions.get(image_number, "Can't Identity Image")
+        csvwriter.writerow([image_number, task_id, caption])
+        csvfile.flush()  # Flush after each row
+
+print("All captions have been retrieved and written to the CSV file.")
+
+# # CSV file creation
+# with open('captions.csv', 'w', newline='') as csvfile:
+#     csvwriter = csv.writer(csvfile)
+#     csvwriter.writerow(['Image_Name', 'Task_ID', 'Caption'])
+
+#     start = time.time()
+
+#     # Send each URL to the Flask endpoint and write to CSV
+#     for url in urls:
+#         image_number = extract_image_number(url)
+#         upload_response = requests.post(os.path.join(endpoint, "upload"), json={"image_url": url})
+#         upload_data = upload_response.json()
+        
+#         if 'task_id' in upload_data:
+#             print(f"Submitted URL {url}, waiting for result...")
+#             task_id = upload_data['task_id']
+#             caption = get_task_result(task_id)
+#             csvwriter.writerow([image_number, task_id, caption if caption else "Can't Identity Image"])
+#             csvfile.flush()
+#             if caption:
+#                 print(f"Caption for image {url}: {caption}")
+#             else:
+#                 print(f"Failed to get caption for image {url}")
+#         else:
+#             caption = upload_data.get('caption', '')
+#             csvwriter.writerow([image_number, '', caption])
+#             csvfile.flush()
+#             print(f"Image {image_number} is existed, caption: {caption}")
+        
+#         time.sleep(2)
+
+#     print(time.time() - start)
