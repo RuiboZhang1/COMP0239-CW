@@ -1,5 +1,5 @@
 from celery.result import AsyncResult
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
 import os
 import redis
@@ -21,6 +21,12 @@ celery = Celery(app.name, broker='redis://10.0.15.135/0', backend='redis://10.0.
 
 # Initialize Redis
 r = redis.Redis(host='10.0.15.135', port=6379, db=0)
+s3_client = boto3.client('s3')
+BUCKET_NAME = 'comp0239-ucabrz5'
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -33,10 +39,21 @@ def upload_file():
         file = request.files['file']
         if file.filename == '':
             return jsonify(error="No selected file."), 400
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
-        image_md5 = md5(file_path)
+
+        # Read file into memory
+        file_stream = file.stream
+        file_stream.seek(0)  # Ensure we're at the start of the file
+        image_md5 = file_md5(file_stream)
+        s3_key = f"{image_md5}.jpg"
+        
+        try:
+            # Reset file pointer to the beginning before uploading
+            file_stream.seek(0)
+            # Upload image to S3
+            s3_client.upload_fileobj(file_stream, BUCKET_NAME, s3_key)
+        except NoCredentialsError:
+            logger.error('AWS credentials not available')
+            return jsonify(error="AWS credentials not available."), 500
 
     elif 'image_url' in request.json:
         image_url = request.json['image_url']
@@ -50,9 +67,12 @@ def upload_file():
 
     # Enqueue image processing task
     if 'file' in request.files:
-        task = process_image.delay(file_path)
-    else:
+        task = process_image.delay(s3_key)
+    elif 'image_url' in request.json:
         task = fetch_and_process_image.delay(image_url)
+    else:
+        return jsonify(error="No file or image URL provided."), 400
+
     return jsonify({"task_id": task.id}), 202
 
 

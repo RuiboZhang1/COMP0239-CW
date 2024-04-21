@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Caption Generator</title>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <!-- Optional: Include Bootstrap JavaScript and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <style>
+        .drag-area {
+            border: 2px dashed #ccc;
+            border-radius: 3px;
+            padding: 30px;
+            text-align: center;
+            margin: 10px;
+        }
+        .drag-area.highlight {
+            border-color: green;
+        }
+        .output {
+            margin-top: 20px;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-5">
+    <h2>Inference API</h2>
+    <p>Image-to-Text</p>
+    <div id="drag-area" class="drag-area">
+        <div class="text-center">
+            <p>Drag image file here or click to browse from your device</p>
+            <input type="file" id="fileInput" accept="image/jpeg" style="display: none;" />
+        </div>
+    </div>
+    <button id="checkResultBtn" class="btn btn-primary mt-3">Check Result</button>
+    <div id="caption" class="caption mt-3"></div>
+    <div id="output" class="output"></div>
+</div>
+
+<script>
+    var dragArea = document.getElementById('drag-area');
+    var output = document.getElementById('output');
+    var fileInput = document.getElementById('fileInput');
+
+    dragArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            // Clear the drag area
+            dragArea.innerHTML = '';
+
+            // Create an image and set its source to the loaded file
+            var img = document.createElement('img');
+            img.src = e.target.result;
+            img.style.maxWidth = '100%'; // This will ensure the image is not bigger than the drag area
+            img.style.height = 'auto';
+
+            // Append the image to the drag area
+            dragArea.appendChild(img);
+
+            // TODO: Send the image to the server and retrieve the caption
+            var formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            // Send the image to the server
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            }).then(response => response.json())
+            .then(data => {
+                if (data.task_id) {
+                    document.getElementById('checkResultBtn').setAttribute('data-task-id', data.task_id);
+                    document.getElementById('caption').textContent = 'Image uploaded. Click "Check Result" to see the caption.';
+                } else if (data.caption) {
+                    document.getElementById('caption').textContent = data.caption;
+                }
+            }).catch(error => {
+                document.getElementById('caption').textContent = 'Upload failed: ' + error;
+            });
+        };
+        reader.readAsDataURL(this.files[0]);
+    }
+});
+
+    dragArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dragArea.classList.add('highlight');
+    });
+
+    dragArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        dragArea.classList.remove('highlight');
+    });
+
+    dragArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dragArea.classList.remove('highlight');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            fileInput.files = e.dataTransfer.files;
+            fileInput.dispatchEvent(new Event('change'));
+        }
+    });
+
+    document.getElementById('checkResultBtn').addEventListener('click', function() {
+        var task_id = this.getAttribute('data-task-id'); // Store the task ID as a data attribute on the button
+        if (!task_id) {
+            document.getElementById('caption').textContent = 'No task to check or still uploading.';
+            return;
+        }
+
+        // Function to check the result from the server
+        function checkResult(task_id) {
+            fetch('/result/' + task_id)
+            .then(response => response.json())
+            .then(data => {
+                if (data.caption) {
+                    document.getElementById('caption').textContent = data.caption;
+                } else if (data.state === 'PENDING') {
+                    document.getElementById('caption').textContent = 'Task is still processing. Please wait...';
+                } else if (data.state === 'FAILURE') {
+                    document.getElementById('caption').textContent = 'Error: ' + data.status;
+                } else if (data.state === 'SUCCESS') {
+                    document.getElementById('caption').textContent = data.result;
+                }
+            }).catch(error => {
+                document.getElementById('caption').textContent = 'Failed to get result: ' + error;
+            });
+        }
+
+        checkResult(task_id); // Call the function with the current task ID
+    });
+</script>
+
+
+</body>
+</html>
