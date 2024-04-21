@@ -6,7 +6,7 @@ import redis
 from celery.utils.log import get_task_logger
 import boto3
 from celery_task_app.tasks import fetch_and_process_image, process_image
-from celery_task_app.utilities import md5, file_md5_from_url
+from celery_task_app.utilities import md5, file_md5_from_url, file_md5
 from celery import Celery
 
 # Initialize boto3 client

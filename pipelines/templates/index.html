@@ -42,7 +42,6 @@
     </div>
     <button id="checkResultBtn" class="btn btn-primary mt-3">Check Result</button>
     <div id="caption" class="caption mt-3"></div>
-    <div id="output" class="output"></div>
 </div>
 
 <script>
@@ -82,9 +81,12 @@
             .then(data => {
                 if (data.task_id) {
                     document.getElementById('checkResultBtn').setAttribute('data-task-id', data.task_id);
-                    document.getElementById('caption').textContent = 'Image uploaded. Click "Check Result" to see the caption.';
+                    document.getElementById('checkResultBtn').removeAttribute('caption');
+                    document.getElementById('caption').textContent = 'Image uploaded and waiting for process. Click "Check Result" to see the caption later.';
                 } else if (data.caption) {
-                    document.getElementById('caption').textContent = data.caption;
+                    document.getElementById('checkResultBtn').setAttribute('caption', data.caption);
+                    document.getElementById('checkResultBtn').removeAttribute('data-task-id');
+                    document.getElementById('caption').textContent = 'Image has processed. Click "Check Result" to see the caption.';
                 }
             }).catch(error => {
                 document.getElementById('caption').textContent = 'Upload failed: ' + error;
@@ -115,9 +117,19 @@
 
     document.getElementById('checkResultBtn').addEventListener('click', function() {
         var task_id = this.getAttribute('data-task-id'); // Store the task ID as a data attribute on the button
-        if (!task_id) {
+        var caption = this.getAttribute('caption');
+
+        // Debugging: Print the task_id and caption to the console
+        console.log('Button clicked with task_id:', task_id, 'and caption:', caption);
+
+        // If a caption is already set, display it immediately
+        if (caption) {
+            document.getElementById('caption').textContent = caption;
+        } else if (task_id) {
+            checkResult(task_id); // Call the function with the current task ID
+        } else {
+            // If neither is set, then the user should wait or no image has been uploaded
             document.getElementById('caption').textContent = 'No task to check or still uploading.';
-            return;
         }
 
         // Function to check the result from the server
@@ -125,21 +137,24 @@
             fetch('/result/' + task_id)
             .then(response => response.json())
             .then(data => {
-                if (data.caption) {
-                    document.getElementById('caption').textContent = data.caption;
+                if (data.state === 'SUCCESS') {
+                    document.getElementById('caption').textContent = data.result;
+                    // Update the caption attribute and clear the task ID
+                    document.getElementById('checkResultBtn').setAttribute('caption', data.result);
+                    document.getElementById('checkResultBtn').setAttribute('data-task-id', null);
                 } else if (data.state === 'PENDING') {
                     document.getElementById('caption').textContent = 'Task is still processing. Please wait...';
+                    // Keep the task ID for further polling
                 } else if (data.state === 'FAILURE') {
                     document.getElementById('caption').textContent = 'Error: ' + data.status;
-                } else if (data.state === 'SUCCESS') {
-                    document.getElementById('caption').textContent = data.result;
+                    // Clear the task ID since the task has failed
+                    document.getElementById('checkResultBtn').setAttribute('data-task-id', null);
                 }
             }).catch(error => {
                 document.getElementById('caption').textContent = 'Failed to get result: ' + error;
+                document.getElementById('checkResultBtn').setAttribute('data-task-id', null);
             });
         }
-
-        checkResult(task_id); // Call the function with the current task ID
     });
 </script>
 
