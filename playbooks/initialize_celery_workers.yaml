@@ -1,0 +1,16 @@
+---
+- name: Setup for client nodes
+  hosts: clients
+  become: true
+  tasks:
+    - name: Refresh the Redis database on specific client
+      shell: redis-cli flushdb
+      when: ansible_host == '18.171.239.125'
+
+    - name: Activate blip_venv, Stop the current Celery worker process, Start a new Celery worker process
+      shell: |
+        source /home/ec2-user/data/blip_venv/bin/activate
+        celery multi stop_verify worker --pidfile=celery.pid --logfile=celery.log
+        celery -A app.celery worker --loglevel=info --pidfile=celery.pid --logfile=celery.log --concurrency=1 -D
+      args:
+        chdir: /home/ec2-user/data/COMP0239-CW/pipelines
