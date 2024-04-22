@@ -29,8 +29,6 @@
         - "9100/udp"  
         - "4200/tcp"  # Prefect
         - "4200/udp"
-        - "6379/tcp"  # Ray
-        - "6379/udp"
         - "8265/tcp"  # Ray Dashboard
         - "8265/udp"
         - "3000/tcp"

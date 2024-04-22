@@ -1,0 +1,16 @@
+- name: Clone Git repository on clients if not already cloned
+  hosts: clients
+  become: true
+  tasks:
+    - name: Check if Git repository already exists
+      stat:
+        path: "/home/ec2-user/data/COMP0239-CW/.git"
+      register: git_repo
+
+    - name: Output git repo existence check
+      debug:
+        msg: "The git repo exists: {{ git_repo.stat.exists }}"
+
+    - name: Clone Git repository if it does not exist
+      command: git clone https://github.com/RuiboZhang1/COMP0239-CW.git /home/ec2-user/data/COMP0239-CW
+      when: not git_repo.stat.exists

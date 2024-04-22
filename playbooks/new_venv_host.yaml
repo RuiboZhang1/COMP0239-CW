@@ -3,6 +3,11 @@
   hosts: host
   become: yes 
   tasks:
+    - name: Install wget using generic package manager
+      ansible.builtin.package:
+        name: wget
+        state: present
+
     - name: Remove the pip cache directory
       file:
         path: /root/.cache/pip
