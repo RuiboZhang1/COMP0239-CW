@@ -5,7 +5,7 @@ import time
 from celery_task_app.utilities import extract_image_number
 
 start_line = 1  # Start reading from this line
-end_line = 1000   # Read up to this line
+end_line = 100   # Read up to this line
 
 # Read lines from start_line to end_line
 urls = []
@@ -67,19 +67,16 @@ for url in urls:
         task_ids[upload_data['task_id']] = image_number  # Map task ID to image number
         print(f"Submitted URL {url}, task ID: {upload_data['task_id']}")
 
-    
     # Wait 2 seconds to send a new image
     time.sleep(2)
 
 # Poll all tasks and wait for their results
 captions = poll_task_results(task_ids.copy())
-# print(f"captions: {captions}")
 
 
 # Write task results to CSV
 for task_id, image_number in task_ids.items():
     caption = captions.get(task_id, "Can't Identify Image")  # Change here to get captions by task_id
-    # print(f"caption: {caption}")
     csvwriter.writerow([image_number, task_id, caption])
     csvfile.flush()
 

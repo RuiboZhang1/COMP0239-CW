@@ -1,13 +1,3 @@
-# from celery.result import AsyncResult
-# from flask import Flask, request, jsonify, render_template
-# from werkzeug.utils import secure_filename
-# import os
-# import redis
-# from celery.utils.log import get_task_logger
-# import boto3
-# from celery_task_app.tasks import fetch_and_process_image, process_image
-# from celery_task_app.utilities import md5, file_md5_from_url, file_md5
-# from celery import Celery
 import logging
 import boto3
 import redis
@@ -37,7 +27,7 @@ s3_client = boto3.client('s3')
 BUCKET_NAME = 'comp0239-ucabrz5'
 
 # Define helper functions
-def save_image_to_s3(file_stream, s3_client, s3_key):
+def save_image_to_s3(file_stream, s3_key):
     """Upload image file stream to S3."""
     try:
         file_stream.seek(0)  # Reset file pointer to the beginning

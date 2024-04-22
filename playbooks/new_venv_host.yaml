@@ -48,3 +48,4 @@
         - botocore
         - celery[redis]
         - flower
+        - flask

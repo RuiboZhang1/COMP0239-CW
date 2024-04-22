@@ -3,29 +3,30 @@
   hosts: clients
   become: true
   tasks:
-    - name: Activate blip_venv and perform tasks
-      shell: |
-        source ~/data/blip_venv/bin/activate
-        cd ~/data/COMP0239-CW/pipelines/
-        if [[ "{{ inventory_hostname }}" == "client" ]]; then
-          redis-cli flushdb
-        fi
-        celery multi stop_verify worker --pidfile=celery.pid --logfile=celery.log
-        celery -A app.celery worker --loglevel=info --pidfile=celery.pid --logfile=celery.log --concurrency=1 -D
-      args:
-        executable: /bin/bash
+    - name: Refresh the Redis database on specific client
+      shell: redis-cli flushdb
+      when: ansible_host == '18.171.239.125'
 
-- name: Setup for host node
-  hosts: host
-  become: true
-  tasks:
-    - name: Activate blip_venv and run applications
+    - name: Activate blip_venv, Stop the current Celery worker process, Start a new Celery worker process
       shell: |
-        source ~/blip_venv/bin/activate
-        cd ~/COMP0239-CW/pipelines/
-        nohup celery -A app.celery flower --port=4505 &
-        nohup prometheus --config.file=/etc/prometheus/prometheus.yml &
-        nohup flask run --host=0.0.0.0 &
-        nohup python test_pipelines.py &
+        source /home/ec2-user/data/blip_venv/bin/activate
+        celery multi stop_verify worker --pidfile=celery.pid --logfile=celery.log
       args:
-        executable: /bin/bash
+        chdir: /home/ec2-user/data/COMP0239-CW/pipelines
+
+
+
+# - name: Setup for host node
+#   hosts: host
+#   become: true
+#   tasks:
+#     - name: Activate blip_venv and run applications
+#       shell: |
+#         source ~/blip_venv/bin/activate
+#         cd ~/COMP0239-CW/pipelines/
+#         nohup celery -A app.celery flower --port=4505 &
+#         nohup prometheus --config.file=/etc/prometheus/prometheus.yml &
+#         nohup flask run --host=0.0.0.0 &
+#         nohup python test_pipelines.py &
+#       args:
+#         executable: /bin/bash
