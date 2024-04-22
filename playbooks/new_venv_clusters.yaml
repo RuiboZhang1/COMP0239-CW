@@ -47,7 +47,7 @@
 
     - name: Install required packages with custom cache directory
       ansible.builtin.pip:
-        requirements: /home/ec2-user/data/BLIP/requirements.txt
+        requirements: /home/ec2-user/data/COMP0239-CW/requirements.txt
         virtualenv: /home/ec2-user/data/blip_venv
         extra_args: "--cache-dir /home/ec2-user/data/tmp"
       environment:

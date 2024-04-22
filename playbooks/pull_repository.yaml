@@ -1,0 +1,24 @@
+---
+- name: Update Git repository on host machines
+  hosts: host
+  become: true
+  tasks:
+    - name: Pull the latest code from GitHub repository
+      git:
+        repo: 'https://github.com/RuiboZhang1/COMP0239-CW.git'
+        dest: '/home/ec2-user/COMP0239-CW'
+        accept_hostkey: yes
+        force: yes
+        update: yes
+
+- name: Update Git repository on cluster machines
+  hosts: clients
+  become: true
+  tasks:
+    - name: Pull the latest code from GitHub repository
+      git:
+        repo: 'https://github.com/RuiboZhang1/COMP0239-CW.git'
+        dest: '/home/ec2-user/data/COMP0239-CW'
+        accept_hostkey: yes
+        force: yes
+        update: yes

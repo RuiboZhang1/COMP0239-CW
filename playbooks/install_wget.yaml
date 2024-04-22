@@ -1,9 +1,0 @@
-- name: Install wget
-  hosts: all
-  become: yes  # Use sudo to elevate privileges
-
-  tasks:
-    - name: Install wget using generic package manager
-      ansible.builtin.package:
-        name: wget
-        state: present
