@@ -63,10 +63,20 @@
         TMPDIR: /home/ec2-user/data/tmp
       become: yes  
 
+    - name: Install PyTorch (CPU version)
+      pip:
+        name: "{{ item }}"
+        state: present
+        extra_args: "--index-url https://download.pytorch.org/whl/cpu --cache-dir /home/ec2-user/data/tmp"
+      loop:
+        - torch
+        - torchvision
+        - torchaudio
+
     - name: Install other Python dependencies with pip
       ansible.builtin.pip:
         name: "{{ item }}"
-        state: latest
+        state: present
         virtualenv: /home/ec2-user/data/blip_venv
         extra_args: "--cache-dir /home/ec2-user/data/tmp"
       loop:
