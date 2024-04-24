@@ -11,7 +11,7 @@ from celery_task_app.tasks import fetch_and_process_image, process_image
 from celery_task_app.utilities import md5, file_md5_from_url, file_md5
 from io import BytesIO
 from PIL import Image
-from botocore.exceptions import NoCredentialsError
+from botocore.exceptions import NoCredentialsError, ClientError
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -26,29 +26,39 @@ r = redis.Redis(host='10.0.15.135', port=6379, db=0)
 s3_client = boto3.client('s3')
 BUCKET_NAME = 'comp0239-ucabrz5'
 
-# Define helper functions
-def save_image_to_s3(file_stream, s3_key):
-    """Upload image file stream to S3."""
-    try:
-        file_stream.seek(0)  # Reset file pointer to the beginning
-        s3_client.upload_fileobj(file_stream, BUCKET_NAME, s3_key)
-        return True
-    except NoCredentialsError:
-        logger.error('AWS credentials not available')
-        return False
+def save_image_to_s3(file_stream, s3_key, max_retries=3, backoff_factor=2):
+    """Upload image file stream to S3 with retries and exponential backoff."""
+    for attempt in range(max_retries):
+        try:
+            file_stream.seek(0)  # Reset file pointer to the beginning
+            s3_client.upload_fileobj(file_stream, BUCKET_NAME, s3_key)
+            return True
+        except (NoCredentialsError, ClientError) as e:
+            logger.error(f'Attempt {attempt + 1} failed with error: {e}')
+            time.sleep(backoff_factor ** attempt)
+    return False
 
-def get_caption_or_task(image_md5, s3_key=None, image_url=None):
-    """Check if image has been processed, or start a processing task."""
-    if r.exists(image_md5):
-        return 'caption', r.get(image_md5).decode('utf-8')
-    elif s3_key:
-        task = process_image.delay(s3_key)
-        return 'task_id', task.id
-    elif image_url:
-        task = fetch_and_process_image.delay(image_url)
-        return 'task_id', task.id
-    else:
-        return 'error', 'No image data provided'
+def get_caption_or_task(image_md5, s3_key=None, image_url=None, max_retries=3):
+    """Check if image has been processed, or start a processing task with retries."""
+    for attempt in range(max_retries):
+        try:
+            if r.exists(image_md5):
+                return 'caption', r.get(image_md5).decode('utf-8')
+            elif s3_key:
+                task = process_image.delay(s3_key)
+                return 'task_id', task.id
+            elif image_url:
+                task = fetch_and_process_image.delay(image_url)
+                return 'task_id', task.id
+            else:
+                return 'error', 'No image data provided'
+        except redis.exceptions.ConnectionError as e:
+            logger.error(f'Redis connection error on attempt {attempt + 1}: {e}')
+            time.sleep(2 ** attempt)  # Exponential backoff
+        except Exception as e:
+            logger.error(f'An unexpected error occurred: {e}')
+            return 'error', str(e)
+
 
 # Define route handlers
 @app.route('/')
@@ -75,11 +85,13 @@ def upload_file():
         image_url = request.json['image_url']
         image_md5 = file_md5_from_url(image_url)
         result_type, result_data = get_caption_or_task(image_md5, image_url=image_url)
+        if result_type == 'error':
+            # If after retries an error still occurs, return an error response
+            return jsonify(error=result_data), 500
     else:
         return jsonify(error="No file or image_url provided."), 400
     
     return jsonify({result_type: result_data}), 202 if result_type == 'task_id' else 200
-
 
 
 @app.route('/result/<task_id>', methods=['GET'])
