@@ -9,8 +9,9 @@
     - name: Activate blip_venv, Stop the current Celery worker process, Start a new Celery worker process
       shell: |
         source /home/ec2-user/data/blip_venv/bin/activate
-        rm celery.log
         celery multi stop_verify worker --pidfile=celery.pid --logfile=celery.log
+        rm celery.log
+        rm celery.pid
         celery -A app.celery worker --loglevel=info --pidfile=celery.pid --logfile=celery.log --concurrency=1 -D
       args:
         chdir: /home/ec2-user/data/COMP0239-CW/pipelines
