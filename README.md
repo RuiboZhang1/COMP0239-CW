@@ -88,7 +88,9 @@ Unless Specified, all commands below should run on the host node.
     - Config Prometheus
         
         - On bash run `sudo vi /etc/prometheus/prometheus.yml`
-        - TODO: Add config image
+        - ![Prometheus Config](https://github.com/RuiboZhang1/COMP0239-CW/blob/main/images/Prometheus_config.png?raw=true)
+        - On `job_name: node`, keep the localhost, replace other targets with your clusters inner ip address.
+
 
     - Run Prometheus as service
         - On bash run `sudo nano /etc/systemd/system/prometheus.service`, add the following:
@@ -163,18 +165,17 @@ Unless Specified, all commands below should run on the host node.
     - Flower provide an interface to monitor the Celery workers and export some metrics to Prometheus.
     - Run `nohup celery -A app.celery flower --port=4505 &> celery_flower_log.txt 2>&1 &`, this comment allows the flower run on background and will not be killed after log out the remote server. The log will be written into celery_flower_log.txt file.
     - On local machine, access to the Flower interface: `public_ip_of_host:4505`
-    - TODO: add image of flower
 
 15. **Initialize Celery Workers (On playbooks Directory)**
     - Command all cluster nodes to join as Celery workers.
     - Run on Bash:`ansible-playbook --private-key=~/.ssh/ansible_key -i inventory.ini initialize_celery_workers.yaml`.
-    - Check the Flower interface, now you show see five machines are Online.
+    - Check the Flower interface, now you show see five machines are Online. ![Flower Interface](https://github.com/RuiboZhang1/COMP0239-CW/blob/main/images/flower_interface.png?raw=true)
     
-16. **Run Flask Server (On pipelines Directory)**
+1.  **Run Flask Server (On pipelines Directory)**
     - Run on Bash:`nohup python app.py > flask_log.txt 2>&1 &`
     - This will run the Flask Server on background, you can access to the Front-end and upload your own image to generate the caption from local machine: `public_ip_of_host:4506`.
 
-17. **Run Test Pipeline (On pipelines Directory)**
+2.  **Run Test Pipeline (On pipelines Directory)**
     - Run on Bash:`nohup python test_pipeline.py > test_pipeline_log.txt 2>&1 &`
     - This file will run on background, read the coco_image_urls.txt file, which contains more than 150k image urls. It will continuously send the url to the Flask server and let the pipeline to generate the caption.
 
