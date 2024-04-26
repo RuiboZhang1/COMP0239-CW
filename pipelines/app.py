@@ -20,10 +20,10 @@ logger = get_task_logger(__name__)
 
 # Initialize Flask app and Celery
 app = Flask(__name__)
-celery = Celery(app.name, broker='redis://10.0.15.135/0', backend='redis://10.0.15.135/1')
+celery = Celery(app.name, broker='redis://10.0.6.168/0', backend='redis://10.0.6.168/1')
 
 # Initialize Redis and S3 client
-r = redis.Redis(host='10.0.15.135', port=6379, db=0)
+r = redis.Redis(host='10.0.6.168', port=6379, db=0)
 s3_client = boto3.client('s3')
 BUCKET_NAME = 'comp0239-ucabrz5'
 

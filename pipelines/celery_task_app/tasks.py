@@ -17,7 +17,7 @@ logger = get_task_logger(__name__)
 # Initialize boto3 S3 client, Redis, and Celery
 s3_client = boto3.client('s3')
 BUCKET_NAME = 'comp0239-ucabrz5' 
-r = redis.Redis(host='10.0.15.135', port=6379, db=0)
+r = redis.Redis(host='10.0.6.168', port=6379, db=0)
 
 
 class PredictTask(Task):
