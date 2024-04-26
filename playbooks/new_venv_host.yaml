@@ -49,3 +49,9 @@
         - celery[redis]
         - flower
         - flask
+        - pillow
+
+    - name: Install 'transformers' package from a Git repository
+      ansible.builtin.pip:
+        name: git+https://github.com/huggingface/transformers
+        virtualenv: /home/ec2-user/blip_venv

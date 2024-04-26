@@ -29,10 +29,10 @@
         - "9100/udp"  
         - "4200/tcp"  # Prefect
         - "4200/udp"
-        - "8265/tcp"  # Ray Dashboard
-        - "8265/udp"
         - "3000/tcp"
-        - "3000/udp" # Grafana
+        - "3000/udp"  # Grafana
+        - "6379/tcp"  # Redis
+        - "6379/udp"
 
     - name: Reload firewalld to apply changes
       ansible.builtin.service:

@@ -89,6 +89,8 @@
         - celery[redis]
         - flower
         - flask
+        - pillow
+        
       environment:
         TMPDIR: /home/ec2-user/data/tmp
         become: yes  
