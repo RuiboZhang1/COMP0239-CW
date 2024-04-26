@@ -1,7 +1,6 @@
 ---
 - name: Update Git repository on host machines
   hosts: host
-  become: true
   tasks:
     - name: Pull the latest code from GitHub repository
       git:
@@ -13,7 +12,6 @@
 
 - name: Update Git repository on cluster machines
   hosts: clients
-  become: true
   tasks:
     - name: Pull the latest code from GitHub repository
       git:

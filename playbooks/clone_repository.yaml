@@ -1,6 +1,5 @@
 - name: Clone Git repository on clients if not already cloned
   hosts: clients
-  become: true
   tasks:
     - name: Check if Git repository already exists
       stat:

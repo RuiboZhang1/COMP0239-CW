@@ -4,7 +4,7 @@
   tasks:
     - name: Refresh the Redis database on specific client
       shell: redis-cli flushdb
-      when: ansible_host == '18.171.239.125'
+      when: ansible_host == '13.40.128.207'
 
     - name: Activate blip_venv, Stop the current Celery worker process, Start a new Celery worker process
       shell: |
