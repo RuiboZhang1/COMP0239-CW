@@ -13,7 +13,7 @@ END_LINE = 150000   # Total number of images to process
 URL_FILE = "coco_image_urls.txt"
 
 # URL of your Flask endpoint
-endpoint = "http://18.133.220.62:4506/"
+endpoint = "http://13.40.128.207:4506/"
 
 # Setup CSV file
 csvfile = open('captions.csv', 'w', newline='')
