@@ -1,0 +1,17 @@
+nohup: ignoring input
+INFO:flower.command:Visit me at http://0.0.0.0:4505
+INFO:flower.command:Broker: redis://10.0.6.168:6379/0
+INFO:flower.command:Registered tasks: 
+['celery.accumulate',
+ 'celery.backend_cleanup',
+ 'celery.chain',
+ 'celery.chord',
+ 'celery.chord_unlock',
+ 'celery.chunks',
+ 'celery.group',
+ 'celery.map',
+ 'celery.starmap',
+ 'celery_task_app.tasks.Blip',
+ 'celery_task_app.tasks.fetch_and_process_image']
+INFO:kombu.mixins:Connected to redis://10.0.6.168:6379/0
+INFO:tornado.general:Malformed HTTP message from 165.154.172.223: Malformed HTTP request line

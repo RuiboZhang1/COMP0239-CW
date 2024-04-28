@@ -1,0 +1,2 @@
+nohup: ignoring input
+All captions have been retrieved and written to the CSV file in 22h:21m:17s.

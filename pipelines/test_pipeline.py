@@ -8,7 +8,7 @@ from celery_task_app.utilities import extract_image_number
 start_time = datetime.now()
 
 # Constants
-BATCH_SIZE = 1000  # Number of images to process per batch
+BATCH_SIZE = 5000  # Number of images to process per batch
 END_LINE = 150000   # Total number of images to process
 URL_FILE = "coco_image_urls.txt"
 
