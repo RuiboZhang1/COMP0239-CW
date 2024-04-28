@@ -68,7 +68,7 @@ Unless Specified, all commands below should run on the host node.
     - Config Prometheus
         
         - On bash run `sudo vi /etc/prometheus/prometheus.yml`
-        - ![Prometheus Config](https://github.com/RuiboZhang1/COMP0239-CW/blob/main/images/Prometheus_config.png?raw=true)
+        - ![Prometheus Config](https://github.com/RuiboZhang1/COMP0239-CW/blob/main/Result%20Images/Prometheus_config.png?raw=true)
         - On `job_name: node`, keep the localhost, replace other targets with your clusters inner ip address.
         - On `job_name: flower`, replace localhost with the inner ip of client node.
 
@@ -173,7 +173,7 @@ Unless Specified, all commands below should run on the host node.
 15. **Initialize Celery Workers (On playbooks Directory - Host node)** (make sure use `blip_venv` environment)
     - Command all cluster nodes to join as Celery workers.
     - Run on Bash:`ansible-playbook --private-key=~/.ssh/ansible_key -i inventory.ini initialize_celery_workers.yaml`.
-    - Check the Flower interface, now you show see five machines are Online. ![Flower Interface](https://github.com/RuiboZhang1/COMP0239-CW/blob/main/images/flower_interface.png?raw=true)
+    - Check the Flower interface, now you show see five machines are Online. ![Flower Interface](https://github.com/RuiboZhang1/COMP0239-CW/blob/main/Result%20Images/flower.png?raw=true)
     
 1.  **Run Flask Server (On pipelines Directory - Client Node)** (make sure use `blip_venv` environment)
     - Run on Bash:`nohup python app.py > flask_log.txt 2>&1 &`
