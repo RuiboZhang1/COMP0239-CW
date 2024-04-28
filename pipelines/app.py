@@ -18,11 +18,11 @@ from botocore.exceptions import NoCredentialsError, ClientError
 logging.basicConfig(level=logging.INFO)
 logger = get_task_logger(__name__)
 
-# Initialize Flask app and Celery
+# Initialize Flask app and Celery (Replace it with your redis address)
 app = Flask(__name__)
 celery = Celery(app.name, broker='redis://10.0.6.168/0', backend='redis://10.0.6.168/1')
 
-# Initialize Redis and S3 client
+# Initialize Redis and S3 client (Replace it with your redis address)
 r = redis.Redis(host='10.0.6.168', port=6379, db=0)
 s3_client = boto3.client('s3')
 BUCKET_NAME = 'comp0239-ucabrz5'
@@ -43,12 +43,12 @@ def get_caption_or_task(image_md5, s3_key=None, image_url=None, max_retries=3):
     """Check if image has been processed, or start a processing task with retries."""
     for attempt in range(max_retries):
         try:
-            if r.exists(image_md5):
+            if r.exists(image_md5): # Check Redis for existing result
                 return 'caption', r.get(image_md5).decode('utf-8')
-            elif s3_key:
-                task = process_image.delay(s3_key)
+            elif s3_key: # Start a new task if no cache entry is found and s3_key is provided
+                task = process_image.delay(s3_key) 
                 return 'task_id', task.id
-            elif image_url:
+            elif image_url: # Start a new task if no cache entry is found and an image URL is provided
                 task = fetch_and_process_image.delay(image_url)
                 return 'task_id', task.id
             else:
@@ -69,7 +69,6 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Endpoint to handle file uploads and image processing."""
-     # Handle file upload from form data
     if 'file' in request.files:
         file = request.files['file']
         if file.filename == '':
@@ -81,7 +80,6 @@ def upload_file():
             result_type, result_data = get_caption_or_task(image_md5, s3_key=s3_key)
         else:
             return jsonify(error="Failed to upload to S3."), 500
-    # Handle image URL in JSON payload
     elif 'image_url' in request.json:
         image_url = request.json['image_url']
         image_md5 = file_md5_from_url(image_url)
@@ -97,6 +95,7 @@ def upload_file():
 
 @app.route('/result/<task_id>', methods=['GET'])
 def get_result(task_id):
+    """Fetch and return the result of a processing task by its task ID."""
     result = celery.AsyncResult(task_id)
 
     if result.state == 'PENDING':

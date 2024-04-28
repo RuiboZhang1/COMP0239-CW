@@ -1,3 +1,11 @@
+# Install COCO API (If you want to run this code)
+"""
+git clone https://github.com/cocodataset/cocoapi.git
+cd cocoapi/PythonAPI
+make
+python setup.py install
+"""
+
 import requests
 import zipfile
 import io
