@@ -70,7 +70,7 @@ Unless Specified, all commands below should run on the host node.
         - On bash run `sudo vi /etc/prometheus/prometheus.yml`
         - ![Prometheus Config](https://github.com/RuiboZhang1/COMP0239-CW/blob/main/images/Prometheus_config.png?raw=true)
         - On `job_name: node`, keep the localhost, replace other targets with your clusters inner ip address.
-
+        - On `job_name: flower`, replace localhost with the inner ip of client node.
 
     - Run Prometheus as service
         - On bash run `sudo nano /etc/systemd/system/prometheus.service`, add the following:
