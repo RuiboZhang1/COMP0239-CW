@@ -45,12 +45,12 @@ Unless Specified, all commands below should run on the host node.
     - `ansible-playbook --private-key=~/.ssh/ansible_key -i inventory.ini clone_repository.yaml`
 
 8. **Set up new python virtual environment**
-    - create a new virtual environment on all machines. There are some differences on the installation since host node doesn't run the model.
+    - create a new virtual environment called `blip_venv` on all machines. There are some differences on the installation since host node doesn't run the model. After this playbook, we should make sure the `blip_venv` is activated before running any command.
     - `ansible-playbook --private-key=~/.ssh/ansible_key -i inventory.ini new_venv_host.yaml`
     - `ansible-playbook --private-key=~/.ssh/ansible_key -i inventory.ini new_venv_clusters.yaml`
 
 9. **Install Required Software (Redis, Firewalld, Node Exporter)**
-    - There are some key softwares need to be installed for running the pipeline
+    - There are some key softwares need to be installed for running the pipeline.
     - `ansible-playbook --private-key=~/.ssh/ansible_key -i inventory.ini install_required_software.yaml`
 
 10. **Open Firewall Port**
@@ -159,27 +159,27 @@ Unless Specified, all commands below should run on the host node.
                 endpoint = "http://13.40.128.207:4506/"
         
 
-13. **Run Redis (On pipelines Directory - Client Node)**
+13. **Run Redis (On pipelines Directory - Client Node)** (make sure use `blip_venv` environment)
     - On Bash run: `sudo vi /etc/redis/redis.conf`
     - Find `bind 127.0.0.1` on the config file,  replace the bracket with inner ip of client node `bind 127.0.0.1 []`. E.g. `bind 127.0.0.1 10.0.6.168`
     - Then On Bash run: `sudo systemctl start redis.service`
     - `sudo systemctl status redis.service` to check if it is open
 
-14. **Run Celery Flower (On pipelines Directory - Client Node)**
+14. **Run Celery Flower (On pipelines Directory - Client Node)** (make sure use `blip_venv` environment)
     - Flower provide an interface to monitor the Celery workers and export some metrics to Prometheus.
     - Run `nohup celery -A app.celery flower --port=4505 &> celery_flower_log.txt 2>&1 &`, this comment allows the flower run on background and will not be killed after log out the remote server. The log will be written into celery_flower_log.txt file.
     - On local machine, access to the Flower interface: `public_ip_of_client:4505`
 
-15. **Initialize Celery Workers (On playbooks Directory - Host node)**
+15. **Initialize Celery Workers (On playbooks Directory - Host node)** (make sure use `blip_venv` environment)
     - Command all cluster nodes to join as Celery workers.
     - Run on Bash:`ansible-playbook --private-key=~/.ssh/ansible_key -i inventory.ini initialize_celery_workers.yaml`.
     - Check the Flower interface, now you show see five machines are Online. ![Flower Interface](https://github.com/RuiboZhang1/COMP0239-CW/blob/main/images/flower_interface.png?raw=true)
     
-1.  **Run Flask Server (On pipelines Directory - Client Node)**
+1.  **Run Flask Server (On pipelines Directory - Client Node)** (make sure use `blip_venv` environment)
     - Run on Bash:`nohup python app.py > flask_log.txt 2>&1 &`
     - This will run the Flask Server on background, you can access to the Front-end and upload your own image to generate the caption from local machine: `public_ip_of_client:4506`.
 
-2.  **Run Test Pipeline (On pipelines Directory - Client Node)**
+2.  **Run Test Pipeline (On pipelines Directory - Client Node)** (make sure use `blip_venv` environment)
     - Run on Bash:`nohup python test_pipeline.py > test_pipeline_log.txt 2>&1 &`
     - This file will run on background, read the coco_image_urls.txt file, which contains more than 150k image urls. It will continuously send the url to the Flask server and let the pipeline to generate the caption.
 
