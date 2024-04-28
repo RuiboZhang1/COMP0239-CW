@@ -21,28 +21,8 @@ Unless Specified, all commands below should run on the host node.
 2. **Setup Inventory File:**
     - The `COMP0239-CW/playbooks` folder contains the inventory file which defines the host and clusters group.
     - Replace the contents with public ip address of your host and cluster machines.
-
-3. **Edit The Pipeline Code (On pipeline Directory)**
-    - We need to **replace the original ip address with your own client ip address** in some files to use the Redis.
-    - In pipelines/app.py, 
-
-            celery = Celery(app.name, broker='redis://10.0.6.168/0', backend='redis://10.0.6.168/1')
-
-            r = redis.Redis(host='10.0.6.168', port=6379, db=0)
-
-    - In pipelines/celery_task_app/tasks.py,
-
-            r = redis.Redis(host='10.0.6.168', port=6379, db=0)
-
-    - In pipelines/celery_task_app/worker.py,
-
-            celery = Celery('celery_app',
-                broker='redis://10.0.6.168/0',
-                backend='redis://10.0.6.168/1',
-                include=['celery_task_app.tasks']
-                )
                 
-3. **Copy Lecture To Host (Run On Local Machine)** 
+3. **Copy Lecture Key To Host (Run On Local Machine)** 
     - `scp -i ~/.ssh/comp0239_key ~/.ssh/comp0239_key ec2-user@ec2-18-133-220-62.eu-west-2.compute.amazonaws.com:~/.ssh/comp0239_key`
     - Replace the key name with your own defined name, and replace the address of your machine.
 
@@ -60,7 +40,7 @@ Unless Specified, all commands below should run on the host node.
     - `ansible-playbook --private-key=~/.ssh/ansible_key -i inventory.ini mount_file_system.yaml`
     - It is not common but might encounter error when running this playbook. The target file name is nvme1n1, but some machines may have the name nvme0n1. Double check by running `lsblk` on the machine, you will see there is a large disk not mounted, replace the name in the playbook.
 
-7. **Command all cluster to git clone the repository**
+7. **Command all cluster to clone the repository from Github**
     - Clone the Github Repository to all cluster machines.
     - `ansible-playbook --private-key=~/.ssh/ansible_key -i inventory.ini clone_repository.yaml`
 
@@ -155,27 +135,51 @@ Unless Specified, all commands below should run on the host node.
         - Then Run queries. Apply -> Save Dashboard
 
 
-13. **Run Redis (on Client Node)**
+14. **Edit The Pipeline Code (On pipelines Directory - Client Node)**
+    - We need to **replace the original ip address with your own client inner ip address** in some files to use the Redis.
+        - In pipelines/app.py, 
+
+                celery = Celery(app.name, broker='redis://10.0.6.168/0', backend='redis://10.0.6.168/1')
+
+                r = redis.Redis(host='10.0.6.168', port=6379, db=0)
+
+        - In pipelines/celery_task_app/tasks.py,
+
+                r = redis.Redis(host='10.0.6.168', port=6379, db=0)
+
+        - In pipelines/celery_task_app/worker.py,
+
+                celery = Celery('celery_app',
+                    broker='redis://10.0.6.168/0',
+                    backend='redis://10.0.6.168/1',
+                    include=['celery_task_app.tasks']
+                    )
+    - In pipelines/test_pipeline.py, **replace the server address with your client public ip address**.
+                
+                endpoint = "http://13.40.128.207:4506/"
+        
+
+13. **Run Redis (On pipelines Directory - Client Node)**
     - On Bash run: `sudo vi /etc/redis/redis.conf`
     - Find `bind 127.0.0.1` on the config file,  replace the bracket with inner ip of client node `bind 127.0.0.1 []`. E.g. `bind 127.0.0.1 10.0.6.168`
     - Then On Bash run: `sudo systemctl start redis.service`
     - `sudo systemctl status redis.service` to check if it is open
 
-14. **Run Celery Flower (On pipelines Directory)**
+14. **Run Celery Flower (On pipelines Directory - Client Node)**
     - Flower provide an interface to monitor the Celery workers and export some metrics to Prometheus.
     - Run `nohup celery -A app.celery flower --port=4505 &> celery_flower_log.txt 2>&1 &`, this comment allows the flower run on background and will not be killed after log out the remote server. The log will be written into celery_flower_log.txt file.
-    - On local machine, access to the Flower interface: `public_ip_of_host:4505`
+    - On local machine, access to the Flower interface: `public_ip_of_client:4505`
 
-15. **Initialize Celery Workers (On playbooks Directory)**
+15. **Initialize Celery Workers (On playbooks Directory - Host node)**
     - Command all cluster nodes to join as Celery workers.
     - Run on Bash:`ansible-playbook --private-key=~/.ssh/ansible_key -i inventory.ini initialize_celery_workers.yaml`.
     - Check the Flower interface, now you show see five machines are Online. ![Flower Interface](https://github.com/RuiboZhang1/COMP0239-CW/blob/main/images/flower_interface.png?raw=true)
     
-1.  **Run Flask Server (On pipelines Directory)**
+1.  **Run Flask Server (On pipelines Directory - Client Node)**
     - Run on Bash:`nohup python app.py > flask_log.txt 2>&1 &`
-    - This will run the Flask Server on background, you can access to the Front-end and upload your own image to generate the caption from local machine: `public_ip_of_host:4506`.
+    - This will run the Flask Server on background, you can access to the Front-end and upload your own image to generate the caption from local machine: `public_ip_of_client:4506`.
 
-2.  **Run Test Pipeline (On pipelines Directory)**
+2.  **Run Test Pipeline (On pipelines Directory - Client Node)**
     - Run on Bash:`nohup python test_pipeline.py > test_pipeline_log.txt 2>&1 &`
     - This file will run on background, read the coco_image_urls.txt file, which contains more than 150k image urls. It will continuously send the url to the Flask server and let the pipeline to generate the caption.
 
